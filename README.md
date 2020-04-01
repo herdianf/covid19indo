@@ -1,2 +1,2 @@
 # covid19indo
-Covid 19 Indonesia Site Simple
+Covid 19 Indonesia Site Simple Version
