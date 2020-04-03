@@ -6,13 +6,23 @@ function curl( $d, $options=array() )
 {
     $ch = curl_init();
     $url = (is_array($d) && !empty($d['url'])) ? $d['url'] : $d;
+    $user_agent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3 like Mac OS X) AppleWebKit/602.1.50 (KHTML, like Gecko) CriOS/56.0.2924.75 Mobile/14E5239e Safari/602.1';
+
+    curl_setopt($ch, CURLOPT_USERAGENT, $user_agent);
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_HEADER, 0);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
     curl_setopt($ch, CURLOPT_ENCODING , "gzip");
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 60);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 300);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+        'referer: https://inacovid19.maps.arcgis.com/apps/opsdashboard/index.html',
+        'origin: https://inacovid19.maps.arcgis.com',
+    ));
+
     if (is_array($d) && !empty($d['post'])) {
         curl_setopt($ch, CURLOPT_POST, 1);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $d['post']);
@@ -21,6 +31,7 @@ function curl( $d, $options=array() )
     if (!empty($options)) {
         curl_setopt_array($ch, $options);
     }
+
     return $ch;
 }
 
@@ -64,12 +75,12 @@ function build_url($params, $services = 'Statistik_Perkembangan_COVID19_Indonesi
 //Tanggal<timestamp '2020-04-01 17:00:00'
 $time = time();
 $hournow = date('G', $time);
-if ($hournow > 17) {
+if ($hournow >= 17) {
     $now = date('Y-m-d 17:00:00', strtotime('+1 day'));
     $past2days = date('Y-m-d', $time - 86400);
 } else {
     $now = date('Y-m-d 17:00:00', $time);
-    $past2days = date('Y-m-d', $time - 86400);
+    $past2days = date('Y-m-d', $time - (86400*2));
 }
 
 $today = date('Y-m-d', $time);
@@ -101,6 +112,7 @@ $params2 = array(
     'cacheHint' => 'true',
 );
 
+/*
 $params3 = array(
     'f' => 'json',
     'where' => '1=1',
@@ -160,15 +172,18 @@ $params7 = array(
     'outStatistics' => '[{"statisticType":"sum","onStatisticField":"Jumlah_pasien_dalam_perawatan","outStatisticFieldName":"value"}]',
     'cacheHint' => 'true',
 );
+*/
 
 $urls = array(
     'date' => build_url($params),
     'propinsi' => build_url($params2, 'COVID19_Indonesia_per_Provinsi'),
+    /*
     'total' => build_url($params3),
     'penambahan' => build_url($params4),
     'meninggal' => build_url($params5),
     'sembuh' => build_url($params6),
     'pdp' => build_url($params7),
+    */
 );
 
 if (isset($argv[1]) && $argv[1] === 'reload')
@@ -303,6 +318,13 @@ footer { border-top: 1px solid #ddd; margin-top: 20px; }
 <body>
 <article>
     <h1>COVID 19 INDONESIA</h1>
+
+    <?php
+
+    $last = $result['date'][count($result['date'])-1]['attributes'];
+
+    ?>
+
     <ul>
         <li>
             <div class="chart-konfirmasi">
@@ -320,8 +342,8 @@ footer { border-top: 1px solid #ddd; margin-top: 20px; }
                 ?>
             </div>
             <h2>TERKONFIRMASI</h2>
-            <p><?php echo $result['total'][0]['attributes']['value']; ?></p>
-            <small>+<?php echo $result['penambahan'][0]['attributes']['value']; ?></small>
+            <p><?php echo $last['Jumlah_Kasus_Kumulatif']; ?></p>
+            <small>+<?php echo $last['Jumlah_Kasus_Baru_per_Hari']; ?></small>
         </li>
         <li>
             <div class="chart-dirawat">
@@ -340,7 +362,11 @@ footer { border-top: 1px solid #ddd; margin-top: 20px; }
                 ?>
             </div>
             <h2>PERAWATAN</h2>
-            <p><?php echo $result['pdp'][0]['attributes']['value']; ?></p>
+            <p><?php echo $last['Jumlah_pasien_dalam_perawatan']; ?></p>
+            <small><?php
+                $percent = number_format(round( $last['Persentase_Pasien_dalam_Perawatan'], 2), 2);
+                echo "$percent%";
+                ?></small>
         </li>
         <li>
             <div class="chart-sembuh">
@@ -359,7 +385,11 @@ footer { border-top: 1px solid #ddd; margin-top: 20px; }
                 ?>
             </div>
             <h2>SEMBUH</h2>
-            <p><?php echo $result['sembuh'][0]['attributes']['value']; ?></p>
+            <p><?php echo $last['Jumlah_Pasien_Sembuh']; ?></p>
+            <small><?php
+                $percent = number_format(round( $last['Persentase_Pasien_Sembuh'], 2), 2);
+                echo "$percent%";
+                ?></small>
         </li>
         <li>
             <div class="chart-meninggal">
@@ -378,14 +408,11 @@ footer { border-top: 1px solid #ddd; margin-top: 20px; }
                 ?>
             </div>
             <h2>MENINGGAL</h2>
-            <p><?php echo $result['meninggal'][0]['attributes']['value']; ?></p>
-            <small><?php 
-				
-				$meninggal = $result['meninggal'][0]['attributes']['value'];
-				$total = $result['total'][0]['attributes']['value'];
-				$percent = number_format(round($meninggal * 100 / $total, 2), 2);
-				echo "$percent%";
-				?></small>
+            <p><?php echo $last['Jumlah_Pasien_Meninggal']; ?></p>
+            <small><?php
+                $percent = number_format(round( $last['Persentase_Pasien_Meninggal'], 2), 2);
+                echo "$percent%";
+                ?></small>
         </li>
     </ul>
 
@@ -462,7 +489,7 @@ footer { border-top: 1px solid #ddd; margin-top: 20px; }
 		}
 		xhr.send();
 	}
-	setInterval(update, 60000);	
+	setInterval(update, 60000);
 </script>
 </body>
 </html>
