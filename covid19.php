@@ -6,32 +6,13 @@ function curl( $d, $options=array() )
 {
     $ch = curl_init();
     $url = (is_array($d) && !empty($d['url'])) ? $d['url'] : $d;
-    $user_agent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 10_3 like Mac OS X) AppleWebKit/602.1.50 (KHTML, like Gecko) CriOS/56.0.2924.75 Mobile/14E5239e Safari/602.1';
-
-    curl_setopt($ch, CURLOPT_USERAGENT, $user_agent);
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_HEADER, 0);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
     curl_setopt($ch, CURLOPT_ENCODING , "gzip");
     curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 60);
     curl_setopt($ch, CURLOPT_TIMEOUT, 300);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-        'referer: https://inacovid19.maps.arcgis.com/apps/opsdashboard/index.html',
-        'origin: https://inacovid19.maps.arcgis.com',
-    ));
-
-    if (is_array($d) && !empty($d['post'])) {
-        curl_setopt($ch, CURLOPT_POST, 1);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $d['post']);
-    }
-
-    if (!empty($options)) {
-        curl_setopt_array($ch, $options);
-    }
-
     return $ch;
 }
 
@@ -44,7 +25,6 @@ function process_http_response( $c, $id )
     if ($status == 200)
     {
         $content = curl_multi_getcontent($c);
-		echo "$content\n";
         $json = json_decode($content, true);
         process_data($json, $id);
     }
