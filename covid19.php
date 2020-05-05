@@ -56,11 +56,9 @@ function build_url($params, $services = 'Statistik_Perkembangan_COVID19_Indonesi
 $time = time();
 $hournow = date('G', $time);
 if ($hournow >= 17) {
-    $now = date('Y-m-d 17:00:00', strtotime('+1 day'));
-    $past2days = date('Y-m-d', $time - 86400);
+    $now = date('Y-m-d 17:00:00', $time + 86400);
 } else {
     $now = date('Y-m-d 17:00:00', $time);
-    $past2days = date('Y-m-d', $time - (86400*2));
 }
 
 $today = date('Y-m-d', $time);
@@ -77,6 +75,7 @@ $params = array(
     'resultRecordCount' => '2000',
     'cacheHint' => 'true',
 );
+
 //https://services5.arcgis.com/VS6HdKS0VfIhv8Ct/arcgis/rest/services/COVID19_Indonesia_per_Provinsi/FeatureServer/0/query
 
 $params2 = array(
@@ -92,82 +91,16 @@ $params2 = array(
     'cacheHint' => 'true',
 );
 
-/*
-$params3 = array(
-    'f' => 'json',
-    'where' => '1=1',
-    'returnGeometry' => 'false',
-    'spatialRel' => 'esriSpatialRelIntersects',
-    'outFields' => '*',
-    'outStatistics' => '[{"statisticType":"sum","onStatisticField":"Jumlah_Kasus_Baru_per_Hari","outStatisticFieldName":"value"}]',
-    'cacheHint' => 'true',
-);
-
-$params4 = array(
-    'f' => 'json',
-    'where' => "(Tanggal>=timestamp '$yesterday 17:00:00' AND Tanggal<=timestamp '$today 16:59:59' OR Tanggal>timestamp '$past2days 16:59:59')",
-    'returnGeometry' => 'false',
-    'spatialRel' => 'esriSpatialRelIntersects',
-    'outFields' => '*',
-    'outStatistics' => '[{"statisticType":"sum","onStatisticField":"Jumlah_Kasus_Baru_per_Hari","outStatisticFieldName":"value"}]',
-    'cacheHint' => 'true',
-);
-
-$params4 = array(
-    'f' => 'json',
-    'where' => "(Tanggal>=timestamp '$yesterday 17:00:00' AND Tanggal<=timestamp '$today 16:59:59' OR Tanggal>timestamp '$past2days 16:59:59')",
-    'returnGeometry' => 'false',
-    'spatialRel' => 'esriSpatialRelIntersects',
-    'outFields' => '*',
-    'outStatistics' => '[{"statisticType":"sum","onStatisticField":"Jumlah_Kasus_Baru_per_Hari","outStatisticFieldName":"value"}]',
-    'cacheHint' => 'true',
-);
-
-$params5 = array(
-    'f' => 'json',
-    'where' => "(Tanggal>=timestamp '$yesterday 17:00:00' AND Tanggal<=timestamp '$today 16:59:59' OR Tanggal>timestamp '$past2days 16:59:59')",
-    'returnGeometry' => 'false',
-    'spatialRel' => 'esriSpatialRelIntersects',
-    'outFields' => '*',
-    'outStatistics' => '[{"statisticType":"sum","onStatisticField":"Jumlah_Pasien_Meninggal","outStatisticFieldName":"value"}]',
-    'cacheHint' => 'true',
-);
-
-$params6 = array(
-    'f' => 'json',
-    'where' => "(Tanggal>=timestamp '$yesterday 17:00:00' AND Tanggal<=timestamp '$today 16:59:59' OR Tanggal>timestamp '$past2days 16:59:59')",
-    'returnGeometry' => 'false',
-    'spatialRel' => 'esriSpatialRelIntersects',
-    'outFields' => '*',
-    'outStatistics' => '[{"statisticType":"sum","onStatisticField":"Jumlah_Pasien_Sembuh","outStatisticFieldName":"value"}]',
-    'cacheHint' => 'true',
-);
-
-$params7 = array(
-    'f' => 'json',
-    'where' => "(Tanggal>=timestamp '$yesterday 17:00:00' AND Tanggal<=timestamp '$today 16:59:59' OR Tanggal>timestamp '$past2days 16:59:59')",
-    'returnGeometry' => 'false',
-    'spatialRel' => 'esriSpatialRelIntersects',
-    'outFields' => '*',
-    'outStatistics' => '[{"statisticType":"sum","onStatisticField":"Jumlah_pasien_dalam_perawatan","outStatisticFieldName":"value"}]',
-    'cacheHint' => 'true',
-);
-*/
-
 $urls = array(
     'date' => build_url($params),
     'propinsi' => build_url($params2, 'COVID19_Indonesia_per_Provinsi'),
-    /*
-    'total' => build_url($params3),
-    'penambahan' => build_url($params4),
-    'meninggal' => build_url($params5),
-    'sembuh' => build_url($params6),
-    'pdp' => build_url($params7),
-    */
 );
 
-if (isset($argv[1]) && $argv[1] === 'reload')
+$is_reload = isset($argv[1]) && $argv[1] === 'reload';
+
+if ($is_reload)
 {
+
     $mh = curl_multi_init();
     $handlers=array();
     foreach($urls as $i=>$url)
@@ -245,10 +178,9 @@ if (isset($argv[1]) && $argv[1] === 'reload')
     {
         file_put_contents($dir . '/covid.json', json_encode($result));
     }
-    exit;
-}
 
-include 'cms_chart.php';
+ob_start();
+include $dir . '/cms_chart.php';
 
 $mtime = filemtime($dir . '/covid.json');
 $content = file_get_contents($dir . '/covid.json');
@@ -271,8 +203,8 @@ article { display: block; text-align: left; width: 650px; margin: 0 auto; min-wi
 a { color: #dc8100; text-decoration: none; }
 a:hover { color: red; }
 ul,li { list-style: none; margin: 0; padding: 0;}
-li {display: inline-block; text-align: center; margin-bottom: 1em; flex: 0 0 25%; max-width: 25%; }
-ul {display: flex; flex-direction: row; flex-wrap: wrap; justify-content: space-between; align-items: stretch;}
+li {display: inline-block; text-align: center; margin-bottom: 1em; flex: 0 0 20%; max-width: 20%; }
+ul {display: flex; flex-direction: row; flex-wrap: wrap; justify-content: space-qawsz; align-items: center;}
 li h2 {font-size:14px; font-weight: normal; line-height: 1; margin: 0;}
 li p {margin: 0; font-size: 32px; line-height: 1; padding:0; }
 small {margin: 0; font-size: 14px;}
@@ -301,39 +233,74 @@ footer { border-top: 1px solid #ddd; margin-top: 20px; }
 
     <?php
 
-    $last = $result['date'][count($result['date'])-1]['attributes'];
+    for($count = count($result['date']) - 1; $count >= 0; $count--)
+    {
+        $last = $result['date'][$count]['attributes'];
+        if ($last['Jumlah_Kasus_Kumulatif'] > 0) break;
+    }
+
+    $result['date'] = array_slice($result['date'], 0, $count);
+    //$sampleCount = ceil($count * 0.05);
+
+    function getSamplingData($key, $sampleCount, $result, $count) {
+        $data = [];
+        for($i=0; $i<$count; $i+=$sampleCount)
+        {
+            $range = array_slice($result['date'], $i, $sampleCount);
+            $sum = 0;
+            foreach($range as $row)
+            {
+                if ($row['attributes'][$key])
+                {
+                    $sum += $row['attributes'][$key];
+                }
+            }
+            $data[] = $sum / count($range);
+        }
+        return $data;
+    }
+
+    $beforeLastPDP = isset($result['date'][$count-1]['attributes']['PDP']) ? $result['date'][$count-1]['attributes']['PDP'] : 0;
 
     ?>
 
     <ul>
         <li>
+            <div class="chart-pdp">
+                <?php
+                $init = ['title' => '', 'xTitle' => '', 'yTitle' => ''];
+                $data = getSamplingData('PDP', 1, $result, $count);
+                $init['chart'] = 'line';
+                $init['xSkip'] = 1;
+                $init['ySkip'] = 1;
+                $init['color'] = 'FF6633';
+                cms_chart($data, $init);
+                ?>
+            </div>
+            <h2>PDP</h2>
+            <p><?php echo number_format($last['PDP'], 0, '', ','); ?></p>
+            <small>+<?php echo $last['PDP'] - $beforeLastPDP; ?></small>
+        </li>
+        <li>
             <div class="chart-konfirmasi">
                 <?php
-                $data = [];
                 $init = ['title' => '', 'xTitle' => '', 'yTitle' => ''];
-                foreach($result['date'] as $date)
-                {
-                    $data[] = $date['attributes']['Jumlah_Kasus_Baru_per_Hari'];
-                }
+                $data = getSamplingData('Jumlah_Kasus_Baru_per_Hari', 3, $result, $count);
                 $init['chart'] = 'line';
                 $init['xSkip'] = 1;
                 $init['ySkip'] = 1;
                 cms_chart($data, $init);
                 ?>
             </div>
-            <h2>TERKONFIRMASI</h2>
-            <p><?php echo $last['Jumlah_Kasus_Kumulatif']; ?></p>
+            <h2>POSITIF</h2>
+            <p><?php echo number_format($last['Jumlah_Kasus_Kumulatif'], 0, '', ','); ?></p>
             <small>+<?php echo $last['Jumlah_Kasus_Baru_per_Hari']; ?></small>
         </li>
         <li>
             <div class="chart-dirawat">
                 <?php
-                $data = [];
                 $init = ['title' => '', 'xTitle' => '', 'yTitle' => ''];
-                foreach($result['date'] as $date)
-                {
-                    $data[] = $date['attributes']['Jumlah_Kasus_Dirawat_per_Hari'];
-                }
+                $data = getSamplingData('Jumlah_Kasus_Dirawat_per_Hari', 3, $result, $count);
                 $init['chart'] = 'line';
                 $init['xSkip'] = 1;
                 $init['ySkip'] = 1;
@@ -342,7 +309,7 @@ footer { border-top: 1px solid #ddd; margin-top: 20px; }
                 ?>
             </div>
             <h2>PERAWATAN</h2>
-            <p><?php echo $last['Jumlah_pasien_dalam_perawatan']; ?></p>
+            <p><?php echo number_format($last['Jumlah_pasien_dalam_perawatan'], 0, '', ','); ?></p>
             <small><?php
                 $percent = number_format(round( $last['Persentase_Pasien_dalam_Perawatan'], 2), 2);
                 echo "$percent%";
@@ -351,12 +318,8 @@ footer { border-top: 1px solid #ddd; margin-top: 20px; }
         <li>
             <div class="chart-sembuh">
                 <?php
-                $data = [];
                 $init = ['title' => '', 'xTitle' => '', 'yTitle' => ''];
-                foreach($result['date'] as $date)
-                {
-                    $data[] = $date['attributes']['Jumlah_Kasus_Sembuh_per_Hari'];
-                }
+                $data = getSamplingData('Jumlah_Kasus_Sembuh_per_Hari', 3, $result, $count);
                 $init['chart'] = 'line';
                 $init['xSkip'] = 1;
                 $init['ySkip'] = 1;
@@ -365,7 +328,7 @@ footer { border-top: 1px solid #ddd; margin-top: 20px; }
                 ?>
             </div>
             <h2>SEMBUH</h2>
-            <p><?php echo $last['Jumlah_Pasien_Sembuh']; ?></p>
+            <p><?php echo number_format($last['Jumlah_Pasien_Sembuh'], 0, '', ','); ?></p>
             <small><?php
                 $percent = number_format(round( $last['Persentase_Pasien_Sembuh'], 2), 2);
                 echo "$percent%";
@@ -374,12 +337,8 @@ footer { border-top: 1px solid #ddd; margin-top: 20px; }
         <li>
             <div class="chart-meninggal">
                 <?php
-                $data = [];
                 $init = ['title' => '', 'xTitle' => '', 'yTitle' => ''];
-                foreach($result['date'] as $date)
-                {
-                    $data[] = $date['attributes']['Jumlah_Kasus_Meninggal_per_Hari'];
-                }
+                $data = getSamplingData('Jumlah_Kasus_Meninggal_per_Hari', 3, $result, $count);
                 $init['chart'] = 'line';
                 $init['xSkip'] = 1;
                 $init['ySkip'] = 1;
@@ -388,7 +347,7 @@ footer { border-top: 1px solid #ddd; margin-top: 20px; }
                 ?>
             </div>
             <h2>MENINGGAL</h2>
-            <p><?php echo $last['Jumlah_Pasien_Meninggal']; ?></p>
+            <p><?php echo number_format($last['Jumlah_Pasien_Meninggal'], 0, '', ','); ?></p>
             <small><?php
                 $percent = number_format(round( $last['Persentase_Pasien_Meninggal'], 2), 2);
                 echo "$percent%";
@@ -473,3 +432,13 @@ footer { border-top: 1px solid #ddd; margin-top: 20px; }
 </script>
 </body>
 </html>
+<?php
+
+$c = ob_get_contents();
+ob_end_clean();
+
+file_put_contents($dir . '/output.html', $c);
+exit;
+}
+
+echo file_get_contents('output.html');
